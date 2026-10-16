@@ -61,10 +61,9 @@ pub mod unix {
                 if libc::setsid() < 0 {
                     return Err(std::io::Error::last_os_error());
                 }
-                // Acquire controlling terminal
-                if libc::ioctl(slave_fd, libc::TIOCSCTTY as _, 0) < 0 {
-                    // Non-fatal if already controlling terminal
-                }
+                // Acquire controlling terminal on stdin (slave PTY is on fd 0)
+                libc::ioctl(0, libc::TIOCSCTTY as _, 0);
+                libc::tcsetpgrp(0, libc::getpid());
                 Ok(())
             });
         }
@@ -76,7 +75,8 @@ pub mod unix {
         cmd.stdin(slave_in)
            .stdout(slave_out)
            .stderr(slave_err)
-           .env("TERM", std::env::var("TERM").unwrap_or_else(|_| "xterm-256color".to_string()));
+           .env("TERM", std::env::var("TERM").unwrap_or_else(|_| "xterm-256color".to_string()))
+           .env("S_SESSION", session_name);
 
         let mut child = match cmd.spawn() {
             Ok(child) => child,

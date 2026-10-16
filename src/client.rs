@@ -97,6 +97,8 @@ pub mod unix {
             let _ = sock_write.write_all(&resize_msg.encode()).await;
         }
 
+        println!("[s: attached to '{}' (detach: Ctrl+\\)]", session_name);
+
         // 5. Enter terminal raw mode with RAII cleanup guard
         let _guard = RawModeGuard::enter()?;
 
