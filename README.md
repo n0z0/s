@@ -1,63 +1,52 @@
 # s
 
-Terminal session manager alternatif tmux dan dtach dengan arsitektur file-backed buffer.
+Session manager terminal sederhana. Mirip `dtach`, tapi output PTY otomatis dicatat ke file (`/tmp/s_<sesi>.log`) biar riwayat terminal nggak hilang waktu detach dan server nggak boros RAM.
 
-Riwayat output terminal langsung dialirkan ke file log di disk (`/tmp`), sehingga proses tetap berjalan di background tanpa memakan RAM untuk riwayat scrollback.
-
-## Instalasi
+## Install
 
 ```bash
 curl -fsSL https://n0z0.if.co.id/s/install.sh | sh
 ```
 
-Atau menggunakan wget:
+Atau download binary langsung di [Releases](https://github.com/n0z0/s/releases).
 
+## Contoh Pakai
+
+Bikin atau masuk ke sesi:
 ```bash
-wget -qO- https://n0z0.if.co.id/s/install.sh | sh
+s kerja
 ```
 
-Binary mandiri juga tersedia di [GitHub Releases](https://github.com/n0z0/s/releases).
+Detach (keluar tanpa matiin proses):
+Tekan `Ctrl+\`
 
-## Penggunaan
-
-Masuk atau buat sesi baru:
-
+Intip output sesi dari terminal lain:
 ```bash
-s main
+tail -f /tmp/s_kerja.log
 ```
 
-Keluar dari sesi (detach) tanpa mematikan proses:
-
-Tekan `Ctrl + \`
-
-Melihat output log langsung dari terminal lain:
-
-```bash
-tail -f /tmp/s_main.log
-```
-
-Melihat daftar sesi aktif:
-
+Cek sesi yang lagi jalan:
 ```bash
 s list
 ```
 
-Mematikan sesi:
-
+Matiin sesi:
 ```bash
-s kill main
+s kill kerja
 ```
 
-## Opsi
+## Opsi CLI
 
-- `s <nama>`: Buat atau sambung ke sesi.
-- `s list` / `s ls`: Tampilkan daftar sesi yang aktif.
-- `s kill <nama>`: Hentikan sesi.
-- `s log <nama>`: Tampilkan isi log sesi (tambahkan `-p` untuk melihat path filenya saja).
-- `-s, --shell <path>`: Shell yang digunakan (default: `$SHELL` atau `/bin/sh`).
-- `-d, --detach-key <key>`: Ganti kombinasi tombol detach (default: `ctrl-\`, bisa `ctrl-a`, `ctrl-]`, dll).
+```
+s <nama>                 Bikin atau sambung ke sesi
+s list (atau s ls)       List sesi aktif
+s kill <nama>            Stop sesi
+s log <nama> [-p]        Lihat isi log (atau path filenya)
+-s, --shell <shell>      Pilih shell (default: $SHELL / /bin/sh)
+-d, --detach-key <key>   Ganti tombol detach (default: ctrl-\)
+```
 
-Untuk dokumentasi teknis dan arsitektur internal, lihat [DEV.md](DEV.md).
+Detail teknis dan arsitektur ada di [DEV.md](DEV.md).
 
 ## Lisensi
 
