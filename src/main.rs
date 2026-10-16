@@ -102,19 +102,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let session_name = sanitize_session_name(&name)?;
                 client::unix::attach_or_create(&session_name, cli.shell, detach_byte).await?;
             } else {
-                // If no session name given, list sessions if any, or print usage
+                // If no session name given, show quickstart guide and active sessions
+                println!("s - terminal session manager\n");
+                println!("Quickstart:");
+                println!("  s <name>           Buat atau masuk ke sesi (mis. `s main`)");
+                println!("  s list (atau ls)   Lihat daftar sesi aktif");
+                println!("  s kill <name>      Matikan sesi (mis. `s kill main`)");
+                println!("  s log <name>       Lihat isi log riwayat sesi (tambah -p untuk path)");
+                println!("  Ctrl + \\           Detach / keluar sementara dari dalam sesi");
+
                 let sessions = list_sessions()?;
                 if !sessions.is_empty() {
-                    println!("Active `s` sessions:");
+                    println!("\nSesi aktif saat ini:");
                     for s in sessions {
                         let status = if s.is_alive { "active" } else { "stale" };
-                        println!("  * {} ({})", s.name, status);
+                        let pid_str = s.pid.map(|p| format!("pid: {}", p)).unwrap_or_else(|| "no-pid".to_string());
+                        let size_str = format_bytes(s.log_size_bytes);
+                        println!("  * {:<14} ({}, {}, log: {})", s.name, status, pid_str, size_str);
                     }
-                    println!("\nUse `s <name>` to attach or create a session.");
+                    println!("\nKetik `s <nama>` untuk masuk ke sesi.");
                 } else {
-                    println!("`s` - Ultra-lightweight terminal session manager");
-                    println!("Usage: s <session_name> (e.g. `s main`)");
-                    println!("Run `s --help` for all options.");
+                    println!("\nBelum ada sesi aktif. Jalankan `s main` untuk memulai.");
                 }
             }
         }
