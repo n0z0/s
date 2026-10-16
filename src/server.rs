@@ -62,7 +62,7 @@ pub mod unix {
                     return Err(std::io::Error::last_os_error());
                 }
                 // Acquire controlling terminal
-                if libc::ioctl(slave_fd, libc::TIOCSCTTY, 0) < 0 {
+                if libc::ioctl(slave_fd, libc::TIOCSCTTY as _, 0) < 0 {
                     // Non-fatal if already controlling terminal
                 }
                 Ok(())
@@ -244,7 +244,7 @@ pub mod unix {
                             ws_ypixel: 0,
                         };
                         unsafe {
-                            libc::ioctl(master_fd, libc::TIOCSWINSZ, &ws);
+                            libc::ioctl(master_fd, libc::TIOCSWINSZ as _, &ws);
                         }
                     }
                     MSG_DETACH => {
