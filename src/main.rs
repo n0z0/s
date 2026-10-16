@@ -67,6 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let session_name = sanitize_session_name(&name)?;
             let pid_p = pid_path(&session_name);
             let sock_p = socket_path(&session_name);
+            let log_p = log_path(&session_name);
 
             if let Ok(pid_str) = fs::read_to_string(&pid_p) {
                 if let Ok(_pid) = pid_str.trim().parse::<i32>() {
@@ -79,6 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let _ = fs::remove_file(&sock_p);
             let _ = fs::remove_file(&pid_p);
+            let _ = fs::remove_file(&log_p);
             println!("[s: session '{}' terminated]", session_name);
         }
 

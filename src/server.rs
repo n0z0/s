@@ -35,11 +35,12 @@ pub mod unix {
         let my_pid = std::process::id();
         fs::write(&pid_p, my_pid.to_string())?;
 
-        // Open log file in append mode (File-Backed Buffer)
+        // Open log file fresh for a new session
         let log_file = Arc::new(Mutex::new(
             OpenOptions::new()
                 .create(true)
-                .append(true)
+                .write(true)
+                .truncate(true)
                 .open(&log_p)?
         ));
 

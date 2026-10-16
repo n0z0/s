@@ -27,6 +27,19 @@ pub mod unix {
         }
     }
 
+    fn get_terminal_size() -> (u16, u16) {
+        let mut ws: libc::winsize = unsafe { std::mem::zeroed() };
+        let mut res = unsafe { libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ as _, &mut ws) };
+        if res != 0 {
+            res = unsafe { libc::ioctl(libc::STDIN_FILENO, libc::TIOCGWINSZ as _, &mut ws) };
+        }
+        if res == 0 && ws.ws_col > 0 && ws.ws_row > 0 {
+            (ws.ws_col, ws.ws_row)
+        } else {
+            (80, 24)
+        }
+    }
+
     pub async fn attach_or_create(
         session_name: &str,
         custom_shell: Option<String>,
@@ -37,7 +50,6 @@ pub mod unix {
 
         // 1. Ensure server is running; spawn if not
         if !is_socket_alive(&sock_p) {
-            println!("[s: starting new session '{}'...]", session_name);
             let current_exe = std::env::current_exe()?;
             let mut cmd = Command::new(current_exe);
             cmd.arg("server").arg(session_name);
@@ -72,6 +84,8 @@ pub mod unix {
             }
         }
 
+        println!("[s: attached to '{}' (detach: Ctrl+\\)]", session_name);
+
         // 2. History Loader: Read persistent log file and replay to local screen
         if log_p.exists() {
             if let Ok(mut file) = File::open(&log_p) {
@@ -92,12 +106,9 @@ pub mod unix {
         let (mut sock_read, mut sock_write) = stream.into_split();
 
         // 4. Send initial terminal window size to server
-        if let Ok((cols, rows)) = crossterm::terminal::size() {
-            let resize_msg = ClientMessage::Resize { rows, cols };
-            let _ = sock_write.write_all(&resize_msg.encode()).await;
-        }
-
-        println!("[s: attached to '{}' (detach: Ctrl+\\)]", session_name);
+        let (cols, rows) = get_terminal_size();
+        let resize_msg = ClientMessage::Resize { rows, cols };
+        let _ = sock_write.write_all(&resize_msg.encode()).await;
 
         // 5. Enter terminal raw mode with RAII cleanup guard
         let _guard = RawModeGuard::enter()?;
@@ -124,12 +135,11 @@ pub mod unix {
             tokio::select! {
                 // Window resize signal from OS
                 _ = sigwinch.recv() => {
-                    if let Ok((cols, rows)) = crossterm::terminal::size() {
-                        let resize_msg = ClientMessage::Resize { rows, cols };
-                        if sock_write.write_all(&resize_msg.encode()).await.is_err() {
-                            exit_reason = ExitReason::Closed;
-                            break;
-                        }
+                    let (cols, rows) = get_terminal_size();
+                    let resize_msg = ClientMessage::Resize { rows, cols };
+                    if sock_write.write_all(&resize_msg.encode()).await.is_err() {
+                        exit_reason = ExitReason::Closed;
+                        break;
                     }
                 }
 
