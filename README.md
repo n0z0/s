@@ -1,6 +1,25 @@
 # s
 TMUX and DTACH Alternatif
 
+[![Release and Deploy](https://github.com/n0z0/s/actions/workflows/release.yml/badge.svg)](https://github.com/n0z0/s/actions/workflows/release.yml)
+[![Website](https://img.shields.io/badge/website-n0z0.if.co.id%2Fs-blue)](https://n0z0.if.co.id/s)
+
+### ⚡ Quick Install (One-Liner)
+
+Install langsung ke user path (`~/.local/bin` atau `/usr/local/bin`):
+
+```bash
+curl -fsSL https://n0z0.if.co.id/s/install.sh | sh
+```
+
+Atau menggunakan `wget`:
+
+```bash
+wget -qO- https://n0z0.if.co.id/s/install.sh | sh
+```
+
+---
+
 PROJECT BRIEF: Aplikasi `s`
 
 ## 1. Ringkasan Proyek
@@ -73,9 +92,52 @@ tail -f /tmp/s_main.log
 
 
 
-## 7. Fokus Fase Pengembangan (Milestones)
+## 7. Status Milestone & Fitur Selesai
 
-* **Fase 1 (Core PTY & TTY):** Berhasil membuat PTY di Rust, menjalankan `bash`, dan menghubungkannya dengan terminal lokal (*Raw Mode*).
-* **Fase 2 (Client-Server IPC):** Memisahkan proses menjadi daemon dan mengimplementasikan jembatan komunikasi menggunakan *Unix Domain Socket*.
-* **Fase 3 (File-Backed Buffer):** Mengimplementasikan penulisan log secara *real-time* di sisi Server dan pembacaan log awal di sisi Client saat *attach*.
-* **Fase 4 (Optimasi & Rilis):** Pembersihan kode, penanganan interupsi sinyal (memastikan socket file terhapus jika server benar-benar dimatikan), dan optimasi ukuran *binary* (`opt-level = 'z'`, `lto = true`).
+* [x] **Fase 1 (Core PTY & TTY):** Pembuatan PTY di Rust (`nix::pty::openpty`), eksekusi shell (`$SHELL` / `/bin/bash`), penyesuaian ukuran terminal (`SIGWINCH` / `TIOCSWINSZ`), dan manipulasi Raw Mode (`crossterm`).
+* [x] **Fase 2 (Client-Server IPC):** Pemisahan proses daemon di latar belakang dan jembatan komunikasi Unix Domain Socket (`/tmp/s_<sesi>.sock`) berbasis Tokio async.
+* [x] **Fase 3 (File-Backed Buffer):** Penulisan log real-time ke `/tmp/s_<sesi>.log` tanpa RAM buffer di server, dan history replay otomatis saat klien attach.
+* [x] **Fase 4 (Optimasi & Rilis):** Pembersihan graceful socket/pid pada shutdown/exit shell, unit test lengkap untuk parsing & protokol, serta konfigurasi profil rilis berukuran ultra-kecil (`opt-level = 'z'`, `lto = true`, `panic = 'abort'`, `strip = true`).
+
+## 8. Panduan Kompilasi & Penggunaan
+
+### Kompilasi
+
+```bash
+# Debug build
+cargo build
+
+# Release build (optimasi ukuran binary biner ultra-ringan)
+cargo build --release
+
+# Menjalankan unit test
+cargo test
+```
+
+### Panduan Perintah CLI
+
+```bash
+# 1. Membuat atau masuk ke sesi baru/lama (default)
+s main
+
+# 2. Menggunakan shell tertentu (opsional)
+s main --shell /bin/zsh
+
+# 3. Menyesuaikan tombol detach (default: Ctrl+\)
+s main -d "ctrl-a"
+
+# 4. Melihat daftar sesi yang aktif
+s list
+# atau alias singkat:
+s ls
+
+# 5. Menghentikan sesi yang sedang berjalan
+s kill main
+
+# 6. Melihat letak path file scrollback log
+s log main --path
+
+# 7. Memantau output sesi dari terminal lain tanpa attach
+tail -f /tmp/s_main.log
+```
+
