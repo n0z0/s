@@ -85,6 +85,15 @@ pub mod unix {
                 return Err(format!("Failed to spawn shell '{}': {}", shell, e).into());
             }
         };
+        // Drop Command to close slave PTY file descriptors in the parent process
+        drop(cmd);
+
+        // Dedicated thread to wait for child shell process exit
+        let (child_exit_tx, mut child_exit_rx) = tokio::sync::oneshot::channel::<()>();
+        std::thread::spawn(move || {
+            let _ = child.wait();
+            let _ = child_exit_tx.send(());
+        });
 
         // Channel for broadcasting PTY output to all connected clients
         let (tx, _rx) = broadcast::channel::<Vec<u8>>(1024);
@@ -143,8 +152,11 @@ pub mod unix {
         let cleanup_pid = pid_p.clone();
 
         tokio::select! {
+            _ = &mut child_exit_rx => {
+                // Shell process exited
+            }
             _ = pty_eof_rx.recv() => {
-                // Shell exited
+                // Shell PTY closed
             }
             _ = tokio::signal::ctrl_c() => {
                 // Interrupted
@@ -155,9 +167,6 @@ pub mod unix {
                 }
             }
         }
-
-        // Wait for child process to finish
-        let _ = child.wait();
 
         // Clean up socket and pid files (keep log file as eternal scrollback buffer)
         let _ = fs::remove_file(&cleanup_sock);
