@@ -32,7 +32,7 @@ Server dijalankan di background secara otomatis saat sesi pertama kali dibuat:
 ### Klien
 Klien menangani antarmuka terminal pengguna:
 1. Memeriksa apakah socket sesi aktif. Jika belum, men-spawn proses server di background dan menunggu socket siap.
-2. Membaca isi file `.log` yang sudah ada dan mencetaknya ke stdout lokal (replay riwayat).
+2. Membaca isi file `.log` secara instan menggunakan fast tail (default: ~64 KB terakhir dengan penyejajaran baris/newline baru, atau `-n <baris>`, atau `--all` untuk membaca penuh) dan mencetaknya ke stdout lokal.
 3. Mengaktifkan raw mode pada terminal lokal pengguna via `crossterm`.
 4. Mengirim dimensi terminal awal dan mendengarkan sinyal `SIGWINCH` untuk meneruskan resize ke server via ioctl `TIOCSWINSZ`.
 5. Membaca keystroke pengguna: jika mendeteksi byte detach (default `0x1C` / `Ctrl+\`), raw mode dimatikan dan koneksi socket ditutup tanpa mematikan server.

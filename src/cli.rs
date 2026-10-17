@@ -23,6 +23,14 @@ pub struct Cli {
     /// Detach key combination (e.g., 'ctrl-\', 'ctrl-a', 'ctrl-]')
     #[arg(short = 'd', long = "detach-key", default_value = "ctrl-\\", global = true)]
     pub detach_key: String,
+
+    /// Replay entire session log history instead of fast tail
+    #[arg(long = "all", global = true)]
+    pub all: bool,
+
+    /// Number of lines to replay from history (0 to disable replay)
+    #[arg(short = 'n', long = "lines", global = true)]
+    pub lines: Option<usize>,
 }
 
 #[derive(Subcommand, Debug)]

@@ -34,7 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Some(Commands::Attach { name }) => {
             let session_name = sanitize_session_name(&name)?;
-            client::unix::attach_or_create(&session_name, cli.shell, detach_byte).await?;
+            let replay_mode = client::resolve_replay_mode(cli.all, cli.lines);
+            client::unix::attach_or_create(&session_name, cli.shell, detach_byte, replay_mode).await?;
         }
 
         Some(Commands::List) => {
@@ -102,12 +103,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             if let Some(name) = cli.session_name {
                 let session_name = sanitize_session_name(&name)?;
-                client::unix::attach_or_create(&session_name, cli.shell, detach_byte).await?;
+                let replay_mode = client::resolve_replay_mode(cli.all, cli.lines);
+                client::unix::attach_or_create(&session_name, cli.shell, detach_byte, replay_mode).await?;
             } else {
                 // If no session name given, show quickstart guide and active sessions
                 println!("s - terminal session manager\n");
                 println!("Quickstart:");
                 println!("  s <name>           Buat atau masuk ke sesi (mis. `s main`)");
+                println!("  s <name> -n 100    Masuk dengan memuat 100 baris riwayat terakhir");
+                println!("  s <name> --all     Masuk dengan memuat seluruh riwayat log dari awal");
                 println!("  s list (atau ls)   Lihat daftar sesi aktif");
                 println!("  s kill <name>      Matikan sesi (mis. `s kill main`)");
                 println!("  s log <name>       Lihat isi log riwayat sesi (tambah -p untuk path)");
