@@ -12,8 +12,8 @@ pub enum ReplayMode {
     None,
 }
 
-/// Default tail buffer size: 64 KB (instant load, sufficient for multiple screens)
-pub const DEFAULT_REPLAY_BYTES: u64 = 64 * 1024;
+/// Default tail buffer size: 256 KB (instant load, sufficient for generous scrollback)
+pub const DEFAULT_REPLAY_BYTES: u64 = 256 * 1024;
 
 /// Resolve CLI arguments into a concrete ReplayMode
 pub fn resolve_replay_mode(all: bool, lines: Option<usize>) -> ReplayMode {

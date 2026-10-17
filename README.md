@@ -38,7 +38,7 @@ s kill kerja
 ## Opsi CLI
 
 ```
-s <nama>                 Bikin atau sambung ke sesi (replay instan ~64KB terakhir)
+s <nama>                 Bikin atau sambung ke sesi (replay instan ~256KB terakhir)
 s <nama> -n <baris>      Sambung ke sesi dengan N baris riwayat terakhir (0 = tanpa replay)
 s <nama> --all           Sambung ke sesi dengan memuat seluruh log dari awal
 s list (atau s ls)       List sesi aktif
