@@ -12,6 +12,64 @@ pub enum ReplayMode {
     None,
 }
 
+/// Locate the detach key in a chunk of keyboard input.
+///
+/// Besides the raw control byte (e.g. `0x1C` for Ctrl+\\), this also recognises the
+/// encodings terminals emit once an application (Claude Code, agy, neovim, ...) has
+/// enabled an enhanced keyboard mode:
+///   - kitty keyboard protocol:  `ESC [ <key>[:...] ; <mods>[:<event>] u`
+///   - xterm modifyOtherKeys:    `ESC [ 27 ; <mods> ; <key> ~`
+///
+/// Returns the byte range `(start, end)` of the detach key within `input`.
+pub fn find_detach_key(input: &[u8], detach_byte: u8) -> Option<(usize, usize)> {
+    // Keycode of the base key: 0x01..0x1A -> 'a'..'z', 0x1C -> '\\', 0x1D -> ']', ...
+    let key = detach_byte.wrapping_add(0x40).to_ascii_lowercase() as u32;
+    // Modifier value is 1 + bitmask; accept Ctrl (4) optionally with Caps/Num Lock (64/128).
+    let is_ctrl = |m: u32| m >= 1 && ((m - 1) & !(64 | 128)) == 4;
+    let first_num = |field: &[u8]| -> Option<u32> {
+        let head = field.split(|&b| b == b':').next()?;
+        if head.is_empty() { return None; }
+        std::str::from_utf8(head).ok()?.parse().ok()
+    };
+
+    let mut i = 0;
+    while i < input.len() {
+        if input[i] == detach_byte {
+            return Some((i, i + 1));
+        }
+        if input[i] == 0x1b && input.get(i + 1) == Some(&b'[') {
+            let params_start = i + 2;
+            let mut j = params_start;
+            while j < input.len() && (input[j].is_ascii_digit() || input[j] == b';' || input[j] == b':') {
+                j += 1;
+            }
+            if j < input.len() {
+                let fields: Vec<&[u8]> = input[params_start..j].split(|&b| b == b';').collect();
+                let hit = match input[j] {
+                    b'u' if fields.len() >= 2 => {
+                        // Ignore key-release events (event type 3)
+                        let released = fields[1].split(|&b| b == b':').nth(1) == Some(&b"3"[..]);
+                        first_num(fields[0]) == Some(key)
+                            && first_num(fields[1]).map_or(false, is_ctrl)
+                            && !released
+                    }
+                    b'~' if fields.len() == 3 => {
+                        first_num(fields[0]) == Some(27)
+                            && first_num(fields[1]).map_or(false, is_ctrl)
+                            && first_num(fields[2]) == Some(key)
+                    }
+                    _ => false,
+                };
+                if hit {
+                    return Some((i, j + 1));
+                }
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
 /// Default tail buffer size: 256 KB (instant load, sufficient for generous scrollback)
 pub const DEFAULT_REPLAY_BYTES: u64 = 256 * 1024;
 
@@ -293,7 +351,7 @@ pub mod unix {
                         Ok(n) => {
                             let input = &stdin_buf[..n];
                             // Check if detach key was pressed
-                            if let Some(pos) = input.iter().position(|&b| b == detach_byte) {
+                            if let Some((pos, _)) = crate::client::find_detach_key(input, detach_byte) {
                                 // Send any characters before the detach key
                                 if pos > 0 {
                                     let before = ClientMessage::Data(input[..pos].to_vec());
@@ -320,6 +378,15 @@ pub mod unix {
                 }
             }
         }
+
+        // Undo terminal modes the attached app may have enabled, so the outer shell
+        // isn't left with kitty keyboard / modifyOtherKeys / mouse reporting / alt screen.
+        let _ = stdout
+            .write_all(
+                b"\x1b[<99u\x1b[>4;0m\x1b[?2004l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1049l\x1b[?25h",
+            )
+            .await;
+        let _ = stdout.flush().await;
 
         // Drop raw mode guard before printing status message
         drop(_guard);
@@ -358,6 +425,26 @@ pub mod unix {
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn test_find_detach_key() {
+        let d = 0x1C;
+        assert_eq!(find_detach_key(b"ab\x1c", d), Some((2, 3)));
+        assert_eq!(find_detach_key(b"hello", d), None);
+        // kitty keyboard protocol
+        assert_eq!(find_detach_key(b"x\x1b[92;5u", d), Some((1, 8)));
+        assert_eq!(find_detach_key(b"\x1b[92;5:1u", d), Some((0, 9)));
+        assert_eq!(find_detach_key(b"\x1b[92:124;5u", d), Some((0, 11)));
+        assert_eq!(find_detach_key(b"\x1b[92;5:3u", d), None); // release
+        assert_eq!(find_detach_key(b"\x1b[92;1u", d), None); // no ctrl
+        assert_eq!(find_detach_key(b"\x1b[97;5u", d), None); // ctrl-a
+        assert_eq!(find_detach_key(b"\x1b[97;5u", 0x01), Some((0, 7)));
+        // xterm modifyOtherKeys
+        assert_eq!(find_detach_key(b"\x1b[27;5;92~", d), Some((0, 10)));
+        assert_eq!(find_detach_key(b"\x1b[27;5;93~", d), None);
+        // unrelated sequences
+        assert_eq!(find_detach_key(b"\x1b[A\x1b[1;5C", d), None);
+    }
 
     #[test]
     fn test_resolve_replay_mode() {
