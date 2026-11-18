@@ -70,6 +70,12 @@ pub fn find_detach_key(input: &[u8], detach_byte: u8) -> Option<(usize, usize)> 
     None
 }
 
+/// Escape sequences that restore the outer terminal to a sane state and clear the screen:
+/// pop kitty keyboard flags, disable modifyOtherKeys, bracketed paste and mouse reporting,
+/// leave the alt screen, reset SGR attributes / scroll region / origin & wrap modes /
+/// cursor & keypad modes, show the cursor, then clear the screen and home the cursor.
+pub const TERMINAL_RESET: &[u8] = b"\x1b[<99u\x1b[>4;0m\x1b[?2004l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1049l\x1b[0m\x1b[r\x1b[?6l\x1b[?7h\x1b[?1l\x1b>\x1b[?25h\x1b[H\x1b[2J";
+
 /// Default tail buffer size: 256 KB (instant load, sufficient for generous scrollback)
 pub const DEFAULT_REPLAY_BYTES: u64 = 256 * 1024;
 
@@ -281,8 +287,17 @@ pub mod unix {
         let stream = UnixStream::connect(&sock_p).await?;
         let (mut sock_read, mut sock_write) = stream.into_split();
 
-        // 4. Send initial terminal window size to server
+        // 4. Send initial terminal window size to server.
+        // The kernel only raises SIGWINCH when the size actually changes, so re-attaching
+        // with the same size leaves full-screen apps (Claude Code, agy, vim, ...) without a
+        // redraw. Briefly send a different size first to force the app to repaint.
         let (cols, rows) = get_terminal_size();
+        let jiggle = ClientMessage::Resize {
+            rows,
+            cols: if cols > 1 { cols - 1 } else { cols + 1 },
+        };
+        let _ = sock_write.write_all(&jiggle.encode()).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
         let resize_msg = ClientMessage::Resize { rows, cols };
         let _ = sock_write.write_all(&resize_msg.encode()).await;
 
@@ -379,13 +394,10 @@ pub mod unix {
             }
         }
 
-        // Undo terminal modes the attached app may have enabled, so the outer shell
-        // isn't left with kitty keyboard / modifyOtherKeys / mouse reporting / alt screen.
-        let _ = stdout
-            .write_all(
-                b"\x1b[<99u\x1b[>4;0m\x1b[?2004l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1049l\x1b[?25h",
-            )
-            .await;
+        // Undo terminal state the attached app may have changed, so the outer shell isn't
+        // left with kitty keyboard / modifyOtherKeys / mouse reporting / alt screen, a
+        // restricted scroll region (shell only redraws one line) or stale screen content.
+        let _ = stdout.write_all(super::TERMINAL_RESET).await;
         let _ = stdout.flush().await;
 
         // Drop raw mode guard before printing status message
