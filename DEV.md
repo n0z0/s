@@ -19,6 +19,12 @@ Secara default, berkas sesi disimpan di `/tmp` (dapat diubah via environment var
 - `/tmp/s_<nama>.log`: File log append-only tempat output PTY dibuang.
 - `/tmp/s_<nama>.pid`: Process ID server untuk manajemen sinyal term.
 
+Karena nama berkas selalu diturunkan dari nama sesi, `s list` tidak menampilkan path socket dan log. Perintah itu hanya menampilkan kolom `SESSION`, `STATUS`, `PID`, dan `LOG SIZE`:
+
+- `STATUS` bernilai `Active` jika `.sock` ada dan server menerima koneksi (`is_socket_alive()` di `src/session.rs`), atau `Stale` jika `.sock` ada tapi koneksi gagal.
+- `PID` dibaca dari `.pid` (`-` jika tidak ada), dan `LOG SIZE` dari ukuran `.log`.
+- Path log tetap bisa dilihat lewat `s log <nama> -p`.
+
 ## 3. Alur Kerja Komponen
 
 ### Server

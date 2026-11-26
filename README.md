@@ -36,6 +36,12 @@ Cek sesi yang lagi jalan:
 ```bash
 s list
 ```
+```
+SESSION          STATUS     PID      LOG SIZE
+---------------- ---------- -------- ------------
+kerja            Active     12345    1.2 MB
+```
+`Active` artinya server sesi masih hidup dan bisa di-attach. `Stale` artinya file socket masih ada tapi servernya udah mati. Path socket dan log nggak ditampilin karena selalu `/tmp/s_<nama>.sock` dan `/tmp/s_<nama>.log` (cek path log pakai `s log <nama> -p`).
 
 Matiin sesi:
 ```bash
