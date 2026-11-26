@@ -5,10 +5,30 @@ const DEFAULT_SOCKET_DIR: &str = "/tmp";
 
 /// Returns the base directory for session files.
 pub fn session_dir() -> PathBuf {
-    if let Ok(dir) = std::env::var("S_SESSION_DIR") {
-        return PathBuf::from(dir);
+    match std::env::var("S_SESSION_DIR") {
+        Ok(dir) if !dir.is_empty() => PathBuf::from(dir),
+        _ => PathBuf::from(DEFAULT_SOCKET_DIR),
     }
-    PathBuf::from(DEFAULT_SOCKET_DIR)
+}
+
+/// Create the session directory (and parents) if it does not exist yet.
+/// New directories get mode 0700 since they hold the session sockets and logs;
+/// an existing directory (such as `/tmp`) is left untouched.
+pub fn ensure_session_dir() -> std::io::Result<PathBuf> {
+    let dir = session_dir();
+    if !dir.is_dir() {
+        let mut builder = fs::DirBuilder::new();
+        builder.recursive(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            builder.mode(0o700);
+        }
+        builder.create(&dir).map_err(|e| {
+            std::io::Error::new(e.kind(), format!("cannot create session directory {:?}: {}", dir, e))
+        })?;
+    }
+    Ok(dir)
 }
 
 /// Validate and sanitize session name to prevent path traversal.

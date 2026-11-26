@@ -11,7 +11,7 @@ pub mod unix {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     use crate::protocol::{MSG_DATA, MSG_RESIZE, MSG_DETACH};
-    use crate::session::{socket_path, log_path, pid_path, cleanup_stale_session};
+    use crate::session::{socket_path, log_path, pid_path, cleanup_stale_session, ensure_session_dir};
 
     struct ServerState {
         master_write: Arc<Mutex<File>>,
@@ -23,6 +23,8 @@ pub mod unix {
         let sock_p = socket_path(session_name);
         let log_p = log_path(session_name);
         let pid_p = pid_path(session_name);
+
+        ensure_session_dir()?;
 
         // Clean up stale session files if any
         cleanup_stale_session(session_name);

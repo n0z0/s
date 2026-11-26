@@ -46,9 +46,8 @@ kerja            Active     12345    1.2 MB
 Folder sesi default-nya `/tmp`. Bisa diganti lewat environment variable `S_SESSION_DIR`, misalnya:
 ```bash
 export S_SESSION_DIR="$HOME/.s"
-mkdir -p "$S_SESSION_DIR"
 ```
-Foldernya harus dibuat dulu, `s` nggak bikin otomatis. Pastikan nilainya sama di semua terminal yang dipakai (taruh di `~/.bashrc` / `~/.zshrc`), karena `s` cuma nyari sesi di folder itu.
+Kalau foldernya belum ada, `s` bikin otomatis (mode `0700`, sejak v0.1.9). Pastikan nilainya sama di semua terminal yang dipakai (taruh di `~/.bashrc` / `~/.zshrc`), karena `s` cuma nyari sesi di folder itu.
 
 Matiin sesi:
 ```bash

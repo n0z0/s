@@ -13,7 +13,7 @@ Perbedaan utama dengan multiplexer seperti `tmux`:
 
 ## 2. Berkas Sesi
 
-Secara default, berkas sesi disimpan di `/tmp` (dapat diubah via environment variable `S_SESSION_DIR`). Folder tersebut tidak dibuat otomatis, dan klien maupun server hanya mencari sesi di folder yang ditunjuk `S_SESSION_DIR` saat itu, jadi nilainya harus sama di semua terminal. Path di bawah memakai nilai default:
+Secara default, berkas sesi disimpan di `/tmp` (dapat diubah via environment variable `S_SESSION_DIR`). Jika folder belum ada, `ensure_session_dir()` di `src/session.rs` membuatnya (beserta parent-nya) dengan mode `0700`; folder yang sudah ada, seperti `/tmp`, tidak diubah. Fungsi ini dipanggil klien sebelum men-spawn server (supaya error terlihat di terminal pengguna) dan oleh server sebelum membuat berkas sesi. Nilai kosong dianggap sama dengan default. Klien maupun server hanya mencari sesi di folder yang ditunjuk `S_SESSION_DIR` saat itu, jadi nilainya harus sama di semua terminal. Path di bawah memakai nilai default:
 
 - `/tmp/s_<nama>.sock`: Unix domain socket untuk komunikasi I/O antara klien dan server.
 - `/tmp/s_<nama>.log`: File log append-only tempat output PTY dibuang.

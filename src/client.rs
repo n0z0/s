@@ -198,7 +198,7 @@ pub mod unix {
 
     use super::{replay_log, ReplayMode};
     use crate::protocol::ClientMessage;
-    use crate::session::{is_socket_alive, log_path, socket_path};
+    use crate::session::{ensure_session_dir, is_socket_alive, log_path, socket_path};
 
     struct RawModeGuard;
 
@@ -236,6 +236,10 @@ pub mod unix {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let sock_p = socket_path(session_name);
         let log_p = log_path(session_name);
+
+        // Make sure S_SESSION_DIR exists before spawning the server, so a failure is
+        // reported here instead of being swallowed by the detached server process.
+        ensure_session_dir()?;
 
         // 1. Ensure server is running; spawn if not
         if !is_socket_alive(&sock_p) {
