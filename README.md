@@ -41,7 +41,14 @@ SESSION          STATUS     PID      LOG SIZE
 ---------------- ---------- -------- ------------
 kerja            Active     12345    1.2 MB
 ```
-`Active` artinya server sesi masih hidup dan bisa di-attach. `Stale` artinya file socket masih ada tapi servernya udah mati. Path socket dan log nggak ditampilin karena selalu `/tmp/s_<nama>.sock` dan `/tmp/s_<nama>.log` (cek path log pakai `s log <nama> -p`).
+`Active` artinya server sesi masih hidup dan bisa di-attach. `Stale` artinya file socket masih ada tapi servernya udah mati. Path socket dan log nggak ditampilin karena selalu `s_<nama>.sock` dan `s_<nama>.log` di folder sesi (cek path log pakai `s log <nama> -p`).
+
+Folder sesi default-nya `/tmp`. Bisa diganti lewat environment variable `S_SESSION_DIR`, misalnya:
+```bash
+export S_SESSION_DIR="$HOME/.s"
+mkdir -p "$S_SESSION_DIR"
+```
+Foldernya harus dibuat dulu, `s` nggak bikin otomatis. Pastikan nilainya sama di semua terminal yang dipakai (taruh di `~/.bashrc` / `~/.zshrc`), karena `s` cuma nyari sesi di folder itu.
 
 Matiin sesi:
 ```bash
