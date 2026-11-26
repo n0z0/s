@@ -34,8 +34,41 @@ Klien menangani antarmuka terminal pengguna:
 1. Memeriksa apakah socket sesi aktif. Jika belum, men-spawn proses server di background dan menunggu socket siap.
 2. Membaca isi file `.log` secara instan menggunakan fast tail (default: ~256 KB terakhir dengan penyejajaran baris/newline baru, atau `-n <baris>`, atau `--all` untuk membaca penuh) dan mencetaknya ke stdout lokal.
 3. Mengaktifkan raw mode pada terminal lokal pengguna via `crossterm`.
-4. Mengirim dimensi terminal awal dan mendengarkan sinyal `SIGWINCH` untuk meneruskan resize ke server via ioctl `TIOCSWINSZ`.
-5. Membaca keystroke pengguna: jika mendeteksi byte detach (default `0x1C` / `Ctrl+\`), raw mode dimatikan dan koneksi socket ditutup tanpa mematikan server.
+4. Mengirim dimensi terminal awal dan mendengarkan sinyal `SIGWINCH` untuk meneruskan resize ke server via ioctl `TIOCSWINSZ`. Saat attach, klien lebih dulu mengirim ukuran sementara (lebar dikurangi 1 kolom), lalu 50 ms kemudian ukuran sebenarnya. Ini perlu karena kernel hanya mengirim `SIGWINCH` ke aplikasi jika ukuran benar-benar berubah; tanpa trik ini aplikasi layar penuh (Claude Code, agy, vim) tidak menggambar ulang layarnya setelah re-attach.
+5. Membaca keystroke pengguna dan mencari tombol detach (default `0x1C` / `Ctrl+\`) lewat `find_detach_key()` di `src/client.rs`. Jika ditemukan, byte sebelum tombol detach tetap diteruskan, pesan Detach dikirim, lalu koneksi socket ditutup tanpa mematikan server. Lihat [Deteksi Tombol Detach](#deteksi-tombol-detach).
+6. Saat keluar (detach maupun sesi tertutup), klien menulis `TERMINAL_RESET` ke stdout sebelum mematikan raw mode, supaya terminal lokal kembali normal. Lihat [Reset Terminal](#reset-terminal).
+
+### Deteksi Tombol Detach
+
+Aplikasi TUI modern menyalakan mode keyboard yang lebih kaya. Setelah itu terminal tidak lagi mengirim `Ctrl+\` sebagai byte `0x1C`, sehingga klien mengenali tiga bentuk:
+
+| Mode terminal | Byte yang dikirim untuk `Ctrl+\` |
+|---|---|
+| Normal | `0x1C` |
+| kitty keyboard protocol | `ESC [ 92 ; 5 u` (bisa disertai alternate key / event type, mis. `ESC [ 92:124 ; 5:1 u`) |
+| xterm `modifyOtherKeys` | `ESC [ 27 ; 5 ; 92 ~` |
+
+Aturannya:
+- Kode tombol diturunkan dari byte detach: `detach_byte + 0x40`, lalu huruf kecil (`0x1C` → `\` = 92, `0x01` → `a` = 97). Jadi tombol hasil `-d` juga dikenali.
+- Nilai modifier dianggap Ctrl jika `(mods - 1)` hanya berisi bit Ctrl (4), boleh ditambah Caps Lock (64) atau Num Lock (128).
+- Event key-release kitty (event type `3`) diabaikan.
+- Keterbatasan: sequence yang terpotong di dua kali `read()` tidak terdeteksi; tekan sekali lagi.
+
+### Reset Terminal
+
+Aplikasi yang di-attach bisa mengubah state terminal lokal. Saat klien keluar, `TERMINAL_RESET` (di `src/client.rs`) mengembalikannya:
+
+- Pop flag kitty keyboard (`CSI < 99 u`) dan matikan `modifyOtherKeys` (`CSI > 4 ; 0 m`).
+- Matikan bracketed paste dan mouse reporting (`?2004`, `?1000`, `?1002`, `?1003`, `?1006`).
+- Keluar dari alternate screen (`?1049l`).
+- Reset atribut SGR, scroll region (`CSI r`), origin mode, autowrap, cursor keys dan keypad mode, lalu tampilkan kursor.
+- Bersihkan layar dan pindahkan kursor ke pojok kiri atas.
+
+Scroll region yang tertinggal adalah penyebab shell hanya memperbarui satu baris setelah detach. Efek sampingnya, tampilan terakhir aplikasi hilang dari layar (di kebanyakan terminal masih bisa di-scroll ke atas).
+
+Karena reset ini, aplikasi tidak tahu mode keyboard-nya sudah dimatikan. Setelah re-attach, kombinasi seperti Shift+Enter mungkin belum jalan sampai aplikasi menyalakan ulang modenya (mis. setelah resize atau restart aplikasi).
+
+Semua perilaku di atas ada di klien, jadi berlaku untuk sesi yang sudah berjalan begitu binary `s` diperbarui. Server lama tidak perlu di-restart karena format protokol tidak berubah.
 
 ## 4. Protokol Komunikasi (Klien ke Server)
 
