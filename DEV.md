@@ -64,7 +64,7 @@ Aplikasi yang di-attach bisa mengubah state terminal lokal. Saat klien keluar, `
 - Reset atribut SGR, scroll region (`CSI r`), origin mode, autowrap, cursor keys dan keypad mode, lalu tampilkan kursor.
 - Bersihkan layar dan pindahkan kursor ke pojok kiri atas.
 
-Scroll region yang tertinggal adalah penyebab shell hanya memperbarui satu baris setelah detach. Efek sampingnya, tampilan terakhir aplikasi hilang dari layar (di kebanyakan terminal masih bisa di-scroll ke atas).
+Tanpa reset ini, shell bisa hanya memperbarui satu baris setelah detach (kemungkinan besar karena scroll region yang tertinggal). Efek sampingnya, tampilan terakhir aplikasi hilang dari layar (di kebanyakan terminal masih bisa di-scroll ke atas).
 
 Karena reset ini, aplikasi tidak tahu mode keyboard-nya sudah dimatikan. Setelah re-attach, kombinasi seperti Shift+Enter mungkin belum jalan sampai aplikasi menyalakan ulang modenya (mis. setelah resize atau restart aplikasi).
 
