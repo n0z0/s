@@ -20,6 +20,13 @@ s kerja
 Detach (keluar tanpa matiin proses):
 Tekan `Ctrl+\`
 
+Aman dipakai bareng TUI modern kayak Claude Code, agy, atau neovim:
+- `Ctrl+\` tetap kedeteksi walaupun aplikasinya nyalain kitty keyboard protocol / `modifyOtherKeys` (sejak v0.1.6).
+- Waktu attach, aplikasi otomatis dipaksa redraw layar penuh, jadi nggak perlu resize jendela dulu (sejak v0.1.7).
+- Waktu detach, mode terminal (keyboard, mouse, alt screen, scroll region) di-reset dan layar dibersihin, jadi shell balik normal (sejak v0.1.7).
+
+Update `s` nggak bikin sesi yang lagi jalan mati. Cukup jalanin ulang script install, terus attach lagi.
+
 Intip output sesi dari terminal lain:
 ```bash
 tail -f /tmp/s_kerja.log
