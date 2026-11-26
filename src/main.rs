@@ -45,22 +45,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
 
-            println!("{:<16} {:<10} {:<8} {:<12} {:<24} {}", "SESSION", "STATUS", "PID", "LOG SIZE", "SOCKET", "LOG FILE");
-            println!("{:-<16} {:-<10} {:-<8} {:-<12} {:-<24} {:-<24}", "", "", "", "", "", "");
+            println!("{:<16} {:<10} {:<8} {}", "SESSION", "STATUS", "PID", "LOG SIZE");
+            println!("{:-<16} {:-<10} {:-<8} {:-<12}", "", "", "", "");
 
             for s in sessions {
                 let status = if s.is_alive { "Active" } else { "Stale" };
                 let pid_str = s.pid.map(|p| p.to_string()).unwrap_or_else(|| "-".to_string());
                 let size_str = format_bytes(s.log_size_bytes);
-                println!(
-                    "{:<16} {:<10} {:<8} {:<12} {:<24} {}",
-                    s.name,
-                    status,
-                    pid_str,
-                    size_str,
-                    s.socket_path.display(),
-                    s.log_path.display()
-                );
+                println!("{:<16} {:<10} {:<8} {}", s.name, status, pid_str, size_str);
             }
         }
 

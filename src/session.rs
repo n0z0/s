@@ -40,8 +40,6 @@ pub fn pid_path(name: &str) -> PathBuf {
 #[derive(Debug, Clone)]
 pub struct SessionInfo {
     pub name: String,
-    pub socket_path: PathBuf,
-    pub log_path: PathBuf,
     pub is_alive: bool,
     pub log_size_bytes: u64,
     pub pid: Option<u32>,
@@ -99,8 +97,6 @@ pub fn list_sessions() -> std::io::Result<Vec<SessionInfo>> {
 
             sessions.push(SessionInfo {
                 name: session_name.to_string(),
-                socket_path: sock_path,
-                log_path: log_p,
                 is_alive: alive,
                 log_size_bytes: log_size,
                 pid,
